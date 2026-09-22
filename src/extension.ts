@@ -13,19 +13,30 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.registerTextDocumentContentProvider(DIFF_SCHEME, diffProvider),
   );
 
-  const activeTarget = (uri: vscode.Uri | undefined): vscode.Uri | undefined =>
-    uri ?? vscode.window.activeTextEditor?.document.uri ?? provider.getActiveDocumentUri();
+  // A menu command's argument varies by where it was invoked from: the
+  // Explorer and editor title pass a plain Uri; a right-click in Source
+  // Control's Changes list passes the SourceControlResourceState itself.
+  const toUri = (arg: unknown): vscode.Uri | undefined => {
+    if (arg instanceof vscode.Uri) {
+      return arg;
+    }
+    const resourceUri = (arg as { resourceUri?: unknown } | undefined)?.resourceUri;
+    return resourceUri instanceof vscode.Uri ? resourceUri : undefined;
+  };
+
+  const activeTarget = (arg: unknown): vscode.Uri | undefined =>
+    toUri(arg) ?? vscode.window.activeTextEditor?.document.uri ?? provider.getActiveDocumentUri();
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('gitdoc.openWith', async (uri?: vscode.Uri) => {
-      const target = activeTarget(uri);
+    vscode.commands.registerCommand('gitdoc.openWith', async (arg?: unknown) => {
+      const target = activeTarget(arg);
       if (target) {
         await vscode.commands.executeCommand('vscode.openWith', target, DocxEditorProvider.viewType);
       }
     }),
-    vscode.commands.registerCommand('gitdoc.compareWithHead', (uri?: vscode.Uri) => compareWithHead(activeTarget(uri), diffProvider)),
+    vscode.commands.registerCommand('gitdoc.compareWithHead', (arg?: unknown) => compareWithHead(activeTarget(arg), diffProvider)),
     vscode.commands.registerCommand('gitdoc.enableGitTextDiff', () => enableGitTextDiff(context)),
-    vscode.commands.registerCommand('gitdoc.writeMirror', (uri?: vscode.Uri) => writeMirrorForCommand(activeTarget(uri))),
+    vscode.commands.registerCommand('gitdoc.writeMirror', (arg?: unknown) => writeMirrorForCommand(activeTarget(arg))),
     vscode.commands.registerCommand('gitdoc.writeMirrors', () => writeWorkspaceMirrors()),
     vscode.commands.registerCommand('gitdoc.toggleMode', () => provider.sendToActivePanel('toggleMode')),
     vscode.commands.registerCommand('gitdoc.cyclePageTheme', () => provider.sendToActivePanel('cyclePageTheme')),

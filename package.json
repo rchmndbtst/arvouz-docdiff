@@ -129,6 +129,18 @@
           "when": "activeCustomEditorId == gitdoc.docxViewer",
           "group": "navigation"
         }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "gitdoc.compareWithHead",
+          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitdoc.writeMirror",
+          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
+          "group": "navigation@2"
+        }
       ]
     },
     "keybindings": [
