@@ -1,0 +1,147 @@
+:root {
+  --gitdoc-page-bg: #ffffff;
+  --gitdoc-page-fg: #1a1a1a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--vscode-font-family, sans-serif);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+}
+
+.gitdoc-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.gitdoc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  flex-wrap: wrap;
+}
+
+.toolbar-file {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  color: var(--vscode-descriptionForeground);
+  font-weight: 400;
+  font-size: 0.85em;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 2px;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.toolbar-button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--vscode-foreground);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.toolbar-button:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+}
+
+.mode-button[aria-pressed="true"] {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.zoom-value {
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  min-width: 3.5em;
+  cursor: pointer;
+}
+
+.gitdoc-viewport {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  padding: 24px;
+}
+
+.gitdoc-loading, .gitdoc-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  text-align: center;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.zoom-frame {
+  display: flex;
+  justify-content: center;
+}
+
+.zoom-surface {
+  transition: transform 0.1s ease-out;
+}
+
+.render-container {
+  background: var(--gitdoc-page-bg);
+  color: var(--gitdoc-page-fg);
+}
+
+.gitdoc-text {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+  line-height: 1.6;
+}
+
+/* Page themes affect Visual mode only; Text mode always follows the editor theme. */
+[data-page-theme="paper"] .render-container { --gitdoc-page-bg: #ffffff; --gitdoc-page-fg: #1a1a1a; }
+[data-page-theme="sepia"] .render-container { --gitdoc-page-bg: #f4ecd8; --gitdoc-page-fg: #3b3021; }
+[data-page-theme="dark"] .render-container.visual-container { filter: invert(1) hue-rotate(180deg); }
+[data-page-theme="dark"] .render-container.visual-container img { filter: invert(1) hue-rotate(180deg); }
+
+.primary-button {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
