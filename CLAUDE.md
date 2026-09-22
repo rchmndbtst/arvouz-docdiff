@@ -14,6 +14,16 @@ The three imports above are the Principal's personal CORE instruction set (`9-RE
 
 No Project-tier (`instr/project/###-*.md`) file exists yet for this repository.
 
+### Branching (CORE's GIT-3, imposed repository-wide regardless of `instr/`)
+
+This repository maintains three standing branches, `feature` → `update` → `deploy`, one-way promotion, no skipping a stage:
+
+- **`feature`** is the default branch and where ongoing work happens. Commit here.
+- **`update`** is staging: merge into it only once work on `feature` is complete and tested.
+- **`deploy`** is production: merge into it only from `update`, once reviewed and tested there, and only with the Principal's explicit confirmation for that merge.
+
+An agent (Claude Code or otherwise) MUST commit only to `feature` by default, and MUST NOT merge `feature` into `update` or `update` into `deploy` unless specifically directed to for that merge. Unlike the `@`-imports above, this section is **not** machine-local: the branch structure itself is part of this repository's history, so it binds anyone working in it, with or without `instr/` present.
+
 ## Commands
 
 ```bash
