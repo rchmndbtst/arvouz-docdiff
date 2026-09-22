@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { readVsCodeGitUri } from './gitCompare';
 import { getLog } from './log';
 import { refreshExistingMirror } from './mirror';
 
@@ -162,7 +163,16 @@ export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<D
 
   private async readDocument(uri: vscode.Uri): Promise<Uint8Array> {
     const maxBytes = this.maxFileSize;
-    const data = await vscode.workspace.fs.readFile(uri);
+    // VS Code opens this side of a Source Control diff-click with a `git:`
+    // scheme URI, backed by its own git extension's FileSystemProvider, not
+    // ours. vscode.workspace.fs.readFile trusts that provider's bytes; when
+    // it returned wrong, truncated content for a real document, GitDoc
+    // rendered "corrupted" although nothing in the repository actually was.
+    // Reading it ourselves via `git show`, the same call compareWithHead
+    // already relies on, is verified correct.
+    const data = uri.scheme === 'git'
+      ? await readVsCodeGitUri(uri)
+      : await vscode.workspace.fs.readFile(uri);
     if (data.byteLength > maxBytes) {
       throw new Error(`This document is larger than the ${Math.round(maxBytes / (1024 * 1024))} MB limit (gitdoc.maxFileSizeMb).`);
     }

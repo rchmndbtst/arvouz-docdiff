@@ -45,16 +45,61 @@ function toRelative(root: string, filePath: string): string | undefined {
   return relative === '' || relative.startsWith('../') ? undefined : relative;
 }
 
+/** Empty ref is git's own convention for "the index" (staged content). */
 async function readAtRef(root: string, relativePath: string, ref: string): Promise<Buffer> {
-  const result = await run(['--no-optional-locks', 'show', `${ref}:${relativePath}`], root);
+  const spec = ref === '' ? `:${relativePath}` : `${ref}:${relativePath}`;
+  const result = await run(['--no-optional-locks', 'show', spec], root);
   if (result.code !== 0) {
+    const label = ref === '' ? 'the index' : ref;
     throw new Error(
       /unknown revision|bad revision|ambiguous argument/i.test(result.stderr)
-        ? `This repository has no commit to compare against yet (${ref} is unborn).`
-        : `"${relativePath}" does not exist in ${ref}.`,
+        ? `This repository has no commit to compare against yet (${label} is unborn).`
+        : `"${relativePath}" does not exist in ${label}.`,
     );
   }
   return result.stdout;
+}
+
+interface VsCodeGitUriParams {
+  readonly path: string;
+  readonly ref: string;
+}
+
+function parseVsCodeGitUri(uri: vscode.Uri): VsCodeGitUriParams | undefined {
+  try {
+    const parsed = JSON.parse(uri.query) as Partial<VsCodeGitUriParams>;
+    return typeof parsed.path === 'string' && typeof parsed.ref === 'string'
+      ? { path: parsed.path, ref: parsed.ref }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Reads a document from VS Code's built-in git extension's own `git:` scheme
+ * URI (its `toGitUri` convention: query is `{"path": <fsPath>, "ref": <rev|"">}`,
+ * empty ref meaning the index). Used in place of `vscode.workspace.fs.readFile`
+ * on that scheme: that API delegates to whatever `FileSystemProvider` the git
+ * extension registers for it, which returned truncated, invalid bytes for a
+ * real document GitDoc encountered (Source Control's own diff-on-click,
+ * distinct from compareWithHead below). A direct `git show`, the same call
+ * compareWithHead already relies on, is verified correct.
+ */
+export async function readVsCodeGitUri(uri: vscode.Uri): Promise<Uint8Array> {
+  const params = parseVsCodeGitUri(uri);
+  if (!params) {
+    throw new Error('GitDoc could not parse this git revision reference.');
+  }
+  const root = await repoRoot(path.dirname(params.path));
+  if (!root) {
+    throw new Error('This document is not inside a git repository.');
+  }
+  const relative = toRelative(root, params.path);
+  if (!relative) {
+    throw new Error('This document is not inside a git repository.');
+  }
+  return readAtRef(root, relative, params.ref);
 }
 
 /** Serves both sides of the comparison as plain text, converting on demand. */
