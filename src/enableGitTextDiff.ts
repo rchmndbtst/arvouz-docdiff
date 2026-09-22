@@ -1,0 +1,74 @@
+import { execFile } from 'node:child_process';
+import { appendFile, readFile } from 'node:fs/promises';
+import * as path from 'node:path';
+import * as vscode from 'vscode';
+import { missingAttributeLines } from './gitAttributes';
+import { getLog } from './log';
+
+function git(args: readonly string[], cwd: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    execFile('git', [...args], { cwd, windowsHide: true }, (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+async function repoRoot(dir: string): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    execFile('git', ['rev-parse', '--show-toplevel'], { cwd: dir, windowsHide: true }, (error, stdout) => {
+      resolve(error ? undefined : stdout.trim());
+    });
+  });
+}
+
+/**
+ * Configures git so `git diff`, `git log -p` and `git show <commit>` print
+ * readable text for a Word document instead of "Binary files differ" — the
+ * standard git textconv mechanism, honoured by the CLI and by any GUI that
+ * shells out to a real `git diff`/`git show <commit>` (rather than reading a
+ * blob directly, which textconv does not cover; the Markdown mirror commands
+ * are what covers that case, including Git Graph's per-file diff view).
+ */
+export async function enableGitTextDiff(context: vscode.ExtensionContext): Promise<void> {
+  const folder = vscode.workspace.workspaceFolders?.[0];
+  if (!folder) {
+    void vscode.window.showWarningMessage('GitDoc: open a folder first.');
+    return;
+  }
+  const root = await repoRoot(folder.uri.fsPath);
+  if (!root) {
+    void vscode.window.showWarningMessage('GitDoc: this folder is not a git repository.');
+    return;
+  }
+
+  const scriptPath = vscode.Uri.joinPath(context.extensionUri, 'dist', 'textconv.cjs').fsPath;
+  try {
+    await git(['config', 'diff.word.textconv', `node "${scriptPath}"`], root);
+    await git(['config', 'diff.word.cachetextconv', 'true'], root);
+    await ensureAttributes(root);
+    void vscode.window.showInformationMessage(
+      'GitDoc: readable git diffs enabled for this repository. `git diff`, `git log -p` and `git show` will now show Word documents as text.',
+    );
+  } catch (error: unknown) {
+    getLog().error('Enabling readable git diffs failed.', error);
+    void vscode.window.showWarningMessage('GitDoc: could not configure git. See the GitDoc log.');
+  }
+}
+
+async function ensureAttributes(root: string): Promise<void> {
+  const attrPath = path.join(root, '.gitattributes');
+  let existing = '';
+  try {
+    existing = await readFile(attrPath, 'utf8');
+  } catch {
+    // No .gitattributes yet — appendFile below creates it.
+  }
+  const addition = missingAttributeLines(existing);
+  if (addition !== '') {
+    await appendFile(attrPath, addition);
+  }
+}
