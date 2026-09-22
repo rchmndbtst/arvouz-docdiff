@@ -1,0 +1,244 @@
+{
+  "name": "arvouz-gitdoc",
+  "displayName": "GitDoc",
+  "description": "View Word documents in VS Code with diffs that actually work in Git Graph, GitLens and the CLI.",
+  "version": "0.1.0",
+  "publisher": "arvouz",
+  "license": "MIT",
+  "author": {
+    "name": "Arvouz"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arvouz/arvouz-gitdoc.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "docx",
+    "word",
+    "git",
+    "git graph",
+    "diff",
+    "viewer"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "gitdoc.docxViewer",
+        "displayName": "Word Document (GitDoc)",
+        "selector": [
+          {
+            "filenamePattern": "*.{docx,docm,dotx,dotm}"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "gitdoc.openWith",
+        "title": "Open with GitDoc",
+        "category": "GitDoc"
+      },
+      {
+        "command": "gitdoc.compareWithHead",
+        "title": "Compare with HEAD",
+        "category": "GitDoc",
+        "enablement": "activeCustomEditorId == gitdoc.docxViewer || resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm"
+      },
+      {
+        "command": "gitdoc.enableGitTextDiff",
+        "title": "Enable Readable Git Diffs (textconv)",
+        "category": "GitDoc"
+      },
+      {
+        "command": "gitdoc.writeMirror",
+        "title": "Write Markdown Mirror",
+        "category": "GitDoc",
+        "enablement": "activeCustomEditorId == gitdoc.docxViewer || resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm"
+      },
+      {
+        "command": "gitdoc.writeMirrors",
+        "title": "Write Markdown Mirrors (Workspace)",
+        "category": "GitDoc"
+      },
+      {
+        "command": "gitdoc.toggleMode",
+        "title": "Toggle Visual/Text Mode",
+        "category": "GitDoc",
+        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+      },
+      {
+        "command": "gitdoc.cyclePageTheme",
+        "title": "Change Page Theme",
+        "category": "GitDoc",
+        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+      },
+      {
+        "command": "gitdoc.zoomIn",
+        "title": "Zoom In",
+        "category": "GitDoc",
+        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+      },
+      {
+        "command": "gitdoc.zoomOut",
+        "title": "Zoom Out",
+        "category": "GitDoc",
+        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+      },
+      {
+        "command": "gitdoc.zoomReset",
+        "title": "Reset Zoom",
+        "category": "GitDoc",
+        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+      },
+      {
+        "command": "gitdoc.showLog",
+        "title": "Show Log",
+        "category": "GitDoc"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "gitdoc.openWith",
+          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
+          "group": "navigation@20"
+        },
+        {
+          "command": "gitdoc.compareWithHead",
+          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
+          "group": "navigation@21"
+        },
+        {
+          "command": "gitdoc.writeMirror",
+          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
+          "group": "navigation@22"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "gitdoc.compareWithHead",
+          "when": "activeCustomEditorId == gitdoc.docxViewer",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "gitdoc.zoomIn",
+        "key": "ctrl+=",
+        "mac": "cmd+=",
+        "when": "activeCustomEditorId == gitdoc.docxViewer"
+      },
+      {
+        "command": "gitdoc.zoomOut",
+        "key": "ctrl+-",
+        "mac": "cmd+-",
+        "when": "activeCustomEditorId == gitdoc.docxViewer"
+      },
+      {
+        "command": "gitdoc.zoomReset",
+        "key": "ctrl+0",
+        "mac": "cmd+0",
+        "when": "activeCustomEditorId == gitdoc.docxViewer"
+      }
+    ],
+    "configuration": {
+      "title": "GitDoc",
+      "properties": {
+        "gitdoc.defaultMode": {
+          "type": "string",
+          "default": "visual",
+          "enum": [
+            "visual",
+            "text"
+          ],
+          "description": "Default rendering mode."
+        },
+        "gitdoc.defaultZoom": {
+          "type": "number",
+          "default": 100,
+          "minimum": 25,
+          "maximum": 400,
+          "description": "Default zoom level in percent."
+        },
+        "gitdoc.defaultPageTheme": {
+          "type": "string",
+          "default": "paper",
+          "enum": [
+            "paper",
+            "sepia",
+            "dark"
+          ],
+          "description": "Background of the page in Visual mode."
+        },
+        "gitdoc.maxFileSizeMb": {
+          "type": "number",
+          "default": 100,
+          "minimum": 1,
+          "maximum": 500,
+          "description": "Maximum DOCX file size that GitDoc will open."
+        },
+        "gitdoc.autoReload": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically reload the preview when the DOCX file changes on disk."
+        },
+        "gitdoc.markdownMirror": {
+          "type": "string",
+          "default": "onChange",
+          "enum": [
+            "off",
+            "onChange"
+          ],
+          "enumDescriptions": [
+            "Do not keep Markdown mirrors up to date.",
+            "Rewrite a mirror when its document changes on disk. Only mirrors that already exist are updated; run \"GitDoc: Write Markdown Mirror(s)\" to create one."
+          ],
+          "description": "Keep a .md mirror of a document up to date, so Git Graph, GitLens, and pull requests can show a readable diff. GitDoc never creates a mirror on its own."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node ./esbuild.mjs",
+    "watch": "node ./esbuild.mjs --watch",
+    "check-types": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
+    "lint": "eslint src webview-src test",
+    "test": "node --experimental-strip-types --test \"test/**/*.test.ts\"",
+    "verify": "npm run lint && npm run check-types && npm run test",
+    "vscode:prepublish": "npm run verify && npm run build",
+    "package": "npm run build && vsce package --no-dependencies",
+    "postinstall": "patch-package"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.44",
+    "docx-preview": "^0.3.7",
+    "dompurify": "^3.3.1",
+    "jszip": "^3.10.1",
+    "mammoth": "^1.12.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^20.19.25",
+    "@types/vscode": "1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.61.0",
+    "@typescript-eslint/parser": "^8.61.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.1",
+    "eslint": "^9.39.1",
+    "patch-package": "^8.0.1",
+    "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

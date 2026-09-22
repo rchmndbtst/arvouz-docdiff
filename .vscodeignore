@@ -1,0 +1,17 @@
+.vscode/**
+instr/**
+src/**
+shared/**
+webview-src/**
+scripts/**
+test/**
+patches/**
+out/**
+out-webview/**
+.eslintrc*
+eslint.config.mjs
+esbuild.mjs
+tsconfig*.json
+**/*.map
+.gitignore
+.gitattributes
