@@ -170,9 +170,11 @@ export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<D
     // rendered "corrupted" although nothing in the repository actually was.
     // Reading it ourselves via `git show`, the same call compareWithHead
     // already relies on, is verified correct.
+    getLog().info(`Reading ${uri.toString()} (scheme=${uri.scheme}).`);
     const data = uri.scheme === 'git'
       ? await readVsCodeGitUri(uri)
       : await vscode.workspace.fs.readFile(uri);
+    getLog().info(`Read ${data.byteLength} bytes from ${uri.toString()}.`);
     if (data.byteLength > maxBytes) {
       throw new Error(`This document is larger than the ${Math.round(maxBytes / (1024 * 1024))} MB limit (gitdoc.maxFileSizeMb).`);
     }

@@ -77,10 +77,26 @@ function parseVsCodeGitUri(uri: vscode.Uri): VsCodeGitUriParams | undefined {
 }
 
 /**
+ * `~` is not a git revision: it's VS Code's own git extension using it as a
+ * sentinel for "the version being compared against the working tree,"
+ * resolved dynamically to the index if this path has staged changes, HEAD
+ * otherwise. Mirrors that extension's own GitContentProvider logic using
+ * plain git plumbing rather than its internal repository model.
+ */
+async function resolveTildeRef(root: string, relativePath: string): Promise<string> {
+  const indexEntry = await run(['ls-files', '-s', '--', relativePath], root);
+  const indexOid = indexEntry.code === 0 ? indexEntry.stdout.toString('utf8').trim().split(/\s+/)[1] : undefined;
+  const headEntry = await run(['rev-parse', '--verify', '--quiet', `HEAD:${relativePath}`], root);
+  const headOid = headEntry.code === 0 ? headEntry.stdout.toString('utf8').trim() : undefined;
+  return indexOid !== undefined && indexOid !== headOid ? '' : HEAD;
+}
+
+/**
  * Reads a document from VS Code's built-in git extension's own `git:` scheme
- * URI (its `toGitUri` convention: query is `{"path": <fsPath>, "ref": <rev|"">}`,
- * empty ref meaning the index). Used in place of `vscode.workspace.fs.readFile`
- * on that scheme: that API delegates to whatever `FileSystemProvider` the git
+ * URI (its `toGitUri` convention: query is `{"path": <fsPath>, "ref": <rev>}`,
+ * where ref is a real revision, `''` for the index, or `~` per
+ * resolveTildeRef above). Used in place of `vscode.workspace.fs.readFile` on
+ * that scheme: that API delegates to whatever `FileSystemProvider` the git
  * extension registers for it, which returned truncated, invalid bytes for a
  * real document GitDoc encountered (Source Control's own diff-on-click,
  * distinct from compareWithHead below). A direct `git show`, the same call
@@ -99,7 +115,8 @@ export async function readVsCodeGitUri(uri: vscode.Uri): Promise<Uint8Array> {
   if (!relative) {
     throw new Error('This document is not inside a git repository.');
   }
-  return readAtRef(root, relative, params.ref);
+  const ref = params.ref === '~' ? await resolveTildeRef(root, relative) : params.ref;
+  return readAtRef(root, relative, ref);
 }
 
 /** Serves both sides of the comparison as plain text, converting on demand. */
