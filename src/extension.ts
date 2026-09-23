@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { DocxEditorProvider } from './docxEditorProvider';
-import { enableGitTextDiff } from './enableGitTextDiff';
-import { compareWithHead, DIFF_SCHEME, DocxDiffContentProvider } from './gitCompare';
+import { setupGitTextDiff } from './setupGitTextDiff';
+import { diffWithHead, DIFF_SCHEME, DocxDiffContentProvider } from './gitCompare';
 import { getLog } from './log';
-import { writeMirrorForCommand, writeWorkspaceMirrors } from './mirror';
+import { writeCompanionForCommand, writeWorkspaceCompanions } from './companion';
 
 export function activate(context: vscode.ExtensionContext): void {
   const provider = DocxEditorProvider.register(context);
@@ -28,22 +28,22 @@ export function activate(context: vscode.ExtensionContext): void {
     toUri(arg) ?? vscode.window.activeTextEditor?.document.uri ?? provider.getActiveDocumentUri();
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('gitdoc.openWith', async (arg?: unknown) => {
+    vscode.commands.registerCommand('docdiff.open', async (arg?: unknown) => {
       const target = activeTarget(arg);
       if (target) {
         await vscode.commands.executeCommand('vscode.openWith', target, DocxEditorProvider.viewType);
       }
     }),
-    vscode.commands.registerCommand('gitdoc.compareWithHead', (arg?: unknown) => compareWithHead(activeTarget(arg), diffProvider)),
-    vscode.commands.registerCommand('gitdoc.enableGitTextDiff', () => enableGitTextDiff(context)),
-    vscode.commands.registerCommand('gitdoc.writeMirror', (arg?: unknown) => writeMirrorForCommand(activeTarget(arg))),
-    vscode.commands.registerCommand('gitdoc.writeMirrors', () => writeWorkspaceMirrors()),
-    vscode.commands.registerCommand('gitdoc.toggleMode', () => provider.sendToActivePanel('toggleMode')),
-    vscode.commands.registerCommand('gitdoc.cyclePageTheme', () => provider.sendToActivePanel('cyclePageTheme')),
-    vscode.commands.registerCommand('gitdoc.zoomIn', () => provider.sendToActivePanel('zoomIn')),
-    vscode.commands.registerCommand('gitdoc.zoomOut', () => provider.sendToActivePanel('zoomOut')),
-    vscode.commands.registerCommand('gitdoc.zoomReset', () => provider.sendToActivePanel('zoomReset')),
-    vscode.commands.registerCommand('gitdoc.showLog', () => getLog().show()),
+    vscode.commands.registerCommand('docdiff.diffWithHead', (arg?: unknown) => diffWithHead(activeTarget(arg), diffProvider)),
+    vscode.commands.registerCommand('docdiff.setupGitTextDiff', () => setupGitTextDiff(context)),
+    vscode.commands.registerCommand('docdiff.writeCompanion', (arg?: unknown) => writeCompanionForCommand(activeTarget(arg))),
+    vscode.commands.registerCommand('docdiff.writeCompanions', () => writeWorkspaceCompanions()),
+    vscode.commands.registerCommand('docdiff.switchView', () => provider.sendToActivePanel('switchView')),
+    vscode.commands.registerCommand('docdiff.cyclePaperTone', () => provider.sendToActivePanel('cyclePaperTone')),
+    vscode.commands.registerCommand('docdiff.zoomIn', () => provider.sendToActivePanel('zoomIn')),
+    vscode.commands.registerCommand('docdiff.zoomOut', () => provider.sendToActivePanel('zoomOut')),
+    vscode.commands.registerCommand('docdiff.zoomReset', () => provider.sendToActivePanel('zoomReset')),
+    vscode.commands.registerCommand('docdiff.showOutput', () => getLog().show()),
   );
 }
 

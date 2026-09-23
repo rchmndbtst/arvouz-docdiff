@@ -2,16 +2,16 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { readVsCodeGitUri } from './gitCompare';
 import { getLog } from './log';
-import { refreshExistingMirror } from './mirror';
+import { refreshExistingCompanion } from './companion';
 
-type RenderMode = 'visual' | 'text';
-type PageTheme = 'paper' | 'sepia' | 'dark';
+type ViewMode = 'page' | 'reading';
+type PaperTone = 'white' | 'sepia' | 'night';
 
 interface ViewerSettings {
-  defaultMode: RenderMode;
+  defaultView: ViewMode;
   defaultZoom: number;
-  defaultPageTheme: PageTheme;
-  autoReload: boolean;
+  defaultPaperTone: PaperTone;
+  reloadOnChange: boolean;
 }
 
 interface PanelEntry {
@@ -35,7 +35,7 @@ class DocxDocument implements vscode.CustomDocument {
 }
 
 export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<DocxDocument> {
-  public static readonly viewType = 'gitdoc.docxViewer';
+  public static readonly viewType = 'docdiff.viewer';
   private readonly panels = new Set<PanelEntry>();
   private activeEntry: PanelEntry | undefined;
 
@@ -90,7 +90,7 @@ export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<D
       }),
     );
 
-    if (this.getSettings().autoReload) {
+    if (this.getSettings().reloadOnChange) {
       const watcher = vscode.workspace.createFileSystemWatcher(document.uri.fsPath);
       entry.subscriptions.push(watcher);
       entry.subscriptions.push(
@@ -98,7 +98,7 @@ export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<D
           if (entry.ready) {
             void this.sendDocument(entry, true);
           }
-          void refreshExistingMirror(document.uri, (uri) => this.readDocument(uri));
+          void refreshExistingCompanion(document.uri, (uri) => this.readDocument(uri));
         }),
       );
     }
@@ -156,7 +156,7 @@ export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<D
       getLog().error(`Opening ${name} failed.`, error);
       void entry.panel.webview.postMessage({
         type: 'hostError',
-        message: error instanceof Error ? error.message : 'GitDoc could not open this document.',
+        message: error instanceof Error ? error.message : 'DocDiff could not open this document.',
       });
     }
   }
@@ -166,9 +166,9 @@ export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<D
     // VS Code opens this side of a Source Control diff-click with a `git:`
     // scheme URI, backed by its own git extension's FileSystemProvider, not
     // ours. vscode.workspace.fs.readFile trusts that provider's bytes; when
-    // it returned wrong, truncated content for a real document, GitDoc
+    // it returned wrong, truncated content for a real document, DocDiff
     // rendered "corrupted" although nothing in the repository actually was.
-    // Reading it ourselves via `git show`, the same call compareWithHead
+    // Reading it ourselves via `git show`, the same call diffWithHead
     // already relies on, is verified correct.
     getLog().info(`Reading ${uri.toString()} (scheme=${uri.scheme}).`);
     const data = uri.scheme === 'git'
@@ -176,23 +176,23 @@ export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<D
       : await vscode.workspace.fs.readFile(uri);
     getLog().info(`Read ${data.byteLength} bytes from ${uri.toString()}.`);
     if (data.byteLength > maxBytes) {
-      throw new Error(`This document is larger than the ${Math.round(maxBytes / (1024 * 1024))} MB limit (gitdoc.maxFileSizeMb).`);
+      throw new Error(`This document is larger than the ${Math.round(maxBytes / (1024 * 1024))} MB limit (docdiff.maxFileSizeMb).`);
     }
     return data;
   }
 
   private get maxFileSize(): number {
-    const mb = clamp(vscode.workspace.getConfiguration('gitdoc').get<number>('maxFileSizeMb', 100), 1, 500);
+    const mb = clamp(vscode.workspace.getConfiguration('docdiff').get<number>('maxFileSizeMb', 100), 1, 500);
     return mb * 1024 * 1024;
   }
 
   private getSettings(): ViewerSettings {
-    const configuration = vscode.workspace.getConfiguration('gitdoc');
+    const configuration = vscode.workspace.getConfiguration('docdiff');
     return {
-      defaultMode: configuration.get<RenderMode>('defaultMode', 'visual'),
+      defaultView: configuration.get<ViewMode>('defaultView', 'page'),
       defaultZoom: clamp(configuration.get<number>('defaultZoom', 100), 25, 400),
-      defaultPageTheme: configuration.get<PageTheme>('defaultPageTheme', 'paper'),
-      autoReload: configuration.get<boolean>('autoReload', true),
+      defaultPaperTone: configuration.get<PaperTone>('defaultPaperTone', 'white'),
+      reloadOnChange: configuration.get<boolean>('reloadOnChange', true),
     };
   }
 
@@ -208,32 +208,32 @@ export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<D
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} data: blob:; font-src ${webview.cspSource} data:;">
 <link rel="stylesheet" href="${styleUri}">
-<title>GitDoc</title>
+<title>DocDiff</title>
 </head>
 <body>
-<div id="app" class="gitdoc-app">
-  <header class="gitdoc-toolbar" role="toolbar" aria-label="Document viewer controls">
+<div id="app" class="dd-app">
+  <header class="dd-toolbar" role="toolbar" aria-label="Document viewer controls">
     <div class="toolbar-file">
       <span id="file-name" class="file-name">Word document</span>
       <span id="file-size" class="file-size"></span>
     </div>
-    <div class="toolbar-group mode-switcher" aria-label="Rendering mode">
-      <button id="mode-visual" class="toolbar-button mode-button" type="button" aria-pressed="true">Visual</button>
-      <button id="mode-text" class="toolbar-button mode-button" type="button" aria-pressed="false">Text</button>
+    <div class="toolbar-group mode-switcher" aria-label="View">
+      <button id="mode-visual" class="toolbar-button mode-button" type="button" aria-pressed="true" title="Page view: the Word layout"><i class="codicon codicon-file"></i> Page</button>
+      <button id="mode-text" class="toolbar-button mode-button" type="button" aria-pressed="false" title="Reading view: clean semantic text"><i class="codicon codicon-book"></i> Reading</button>
     </div>
     <div class="toolbar-spacer"></div>
-    <button id="page-theme-button" class="toolbar-button" type="button" title="Page theme">Theme</button>
-    <div class="toolbar-group zoom-controls" aria-label="Zoom controls">
-      <button id="zoom-out" class="toolbar-button icon-button" type="button" title="Zoom out">-</button>
-      <button id="zoom-reset" class="zoom-value" type="button" title="Reset zoom">100%</button>
-      <button id="zoom-in" class="toolbar-button icon-button" type="button" title="Zoom in">+</button>
+    <button id="paper-tone-button" class="toolbar-button" type="button" title="Cycle paper tone"><i class="codicon codicon-color-mode"></i> <span id="paper-tone-label">white</span></button>
+    <div class="toolbar-group zoom-controls" aria-label="Zoom">
+      <button id="zoom-out" class="toolbar-button icon-button" type="button" title="Zoom out" aria-label="Zoom out"><i class="codicon codicon-zoom-out"></i></button>
+      <button id="zoom-reset" class="zoom-value" type="button" title="Actual size">100%</button>
+      <button id="zoom-in" class="toolbar-button icon-button" type="button" title="Zoom in" aria-label="Zoom in"><i class="codicon codicon-zoom-in"></i></button>
     </div>
   </header>
-  <main id="viewport" class="gitdoc-viewport">
-    <div id="loading" class="gitdoc-loading">
+  <main id="viewport" class="dd-viewport">
+    <div id="loading" class="dd-loading">
       <div id="loading-label">Waiting for document...</div>
     </div>
-    <section id="error-state" class="gitdoc-error hidden" role="alert">
+    <section id="error-state" class="dd-error hidden" role="alert">
       <h1>Unable to preview this document</h1>
       <p id="error-message"></p>
       <button id="retry-button" class="primary-button" type="button">Try again</button>
@@ -241,7 +241,7 @@ export class DocxEditorProvider implements vscode.CustomReadonlyEditorProvider<D
     <div id="zoom-frame" class="zoom-frame hidden">
       <div id="zoom-surface" class="zoom-surface">
         <div id="visual-container" class="render-container visual-container"></div>
-        <article id="text-container" class="render-container gitdoc-text hidden"></article>
+        <article id="text-container" class="render-container dd-text hidden"></article>
       </div>
     </div>
   </main>

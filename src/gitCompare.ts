@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { docxToDiffText } from './convert';
 import { getLog } from './log';
 
-export const DIFF_SCHEME = 'gitdoc-diff';
+export const DIFF_SCHEME = 'docdiff-rev';
 const HEAD = 'HEAD';
 
 function gitPath(): string {
@@ -22,7 +22,7 @@ function run(args: readonly string[], cwd: string): Promise<{ code: number; stdo
       (error, stdout, stderr) => {
         const spawnCode = (error as { code?: unknown } | null)?.code;
         if (typeof spawnCode === 'string') {
-          reject(new Error(`GitDoc could not run git ("${gitPath()}"). Install git or set the "git.path" setting.`));
+          reject(new Error(`DocDiff could not run git ("${gitPath()}"). Install git or set the "git.path" setting.`));
           return;
         }
         resolve({ code: typeof spawnCode === 'number' ? spawnCode : 0, stdout, stderr: stderr.toString('utf8') });
@@ -80,7 +80,7 @@ function parseVsCodeGitUri(uri: vscode.Uri): VsCodeGitUriParams | undefined {
  * `~` is not a git revision: it's VS Code's own git extension using it as a
  * sentinel for "the version being compared against the working tree,"
  * resolved dynamically to the index if this path has staged changes, HEAD
- * otherwise. Mirrors that extension's own GitContentProvider logic using
+ * otherwise. Companions that extension's own GitContentProvider logic using
  * plain git plumbing rather than its internal repository model.
  */
 async function resolveTildeRef(root: string, relativePath: string): Promise<string> {
@@ -98,14 +98,14 @@ async function resolveTildeRef(root: string, relativePath: string): Promise<stri
  * resolveTildeRef above). Used in place of `vscode.workspace.fs.readFile` on
  * that scheme: that API delegates to whatever `FileSystemProvider` the git
  * extension registers for it, which returned truncated, invalid bytes for a
- * real document GitDoc encountered (Source Control's own diff-on-click,
- * distinct from compareWithHead below). A direct `git show`, the same call
- * compareWithHead already relies on, is verified correct.
+ * real document DocDiff encountered (Source Control's own diff-on-click,
+ * distinct from diffWithHead below). A direct `git show`, the same call
+ * diffWithHead already relies on, is verified correct.
  */
 export async function readVsCodeGitUri(uri: vscode.Uri): Promise<Uint8Array> {
   const params = parseVsCodeGitUri(uri);
   if (!params) {
-    throw new Error('GitDoc could not parse this git revision reference.');
+    throw new Error('DocDiff could not parse this git revision reference.');
   }
   const root = await repoRoot(path.dirname(params.path));
   if (!root) {
@@ -136,7 +136,7 @@ export class DocxDiffContentProvider implements vscode.TextDocumentContentProvid
     try {
       return await docxToDiffText(bytes);
     } catch {
-      return '(GitDoc could not convert this revision to text.)';
+      return '(DocDiff could not convert this revision to text.)';
     }
   }
 
@@ -167,9 +167,9 @@ function decodeDiffUri(uri: vscode.Uri): { target: vscode.Uri; ref: string | und
   return { target: of ? vscode.Uri.parse(of) : uri.with({ scheme: 'file' }), ref: params.get('ref') ?? undefined };
 }
 
-export async function compareWithHead(target: vscode.Uri | undefined, provider: DocxDiffContentProvider): Promise<void> {
+export async function diffWithHead(target: vscode.Uri | undefined, provider: DocxDiffContentProvider): Promise<void> {
   if (!target || target.scheme !== 'file') {
-    void vscode.window.showWarningMessage('GitDoc: open or select a Word document to compare it with HEAD.');
+    void vscode.window.showWarningMessage('DocDiff: open or select a Word document to compare it with HEAD.');
     return;
   }
   const name = path.basename(target.path);
@@ -192,6 +192,6 @@ export async function compareWithHead(target: vscode.Uri | undefined, provider: 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     getLog().error(`Comparing ${name} with HEAD failed.`, error);
-    void vscode.window.showWarningMessage(`GitDoc: ${message}`);
+    void vscode.window.showWarningMessage(`DocDiff: ${message}`);
   }
 }

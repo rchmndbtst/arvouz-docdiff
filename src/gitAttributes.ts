@@ -1,14 +1,14 @@
 export const DOCX_DIFF_ATTRIBUTE_LINES = [
-  '*.docx diff=word',
-  '*.docm diff=word',
-  '*.dotx diff=word',
-  '*.dotm diff=word',
+  '*.docx diff=docdiff',
+  '*.docm diff=docdiff',
+  '*.dotx diff=docdiff',
+  '*.dotm diff=docdiff',
 ];
 
 /**
- * The text to append to .gitattributes so it declares the "word" diff driver
+ * The text to append to .gitattributes so it declares the "docdiff" diff driver
  * for every Word extension, or '' when every line is already there. Pulled
- * out from enableGitTextDiff so it can be unit tested without a vscode host.
+ * out from setupGitTextDiff so it can be unit tested without a vscode host.
  */
 export function missingAttributeLines(existing: string): string {
   const missing = DOCX_DIFF_ATTRIBUTE_LINES.filter((line) => !existing.includes(line));

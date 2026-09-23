@@ -1,21 +1,22 @@
 import { renderAsync } from 'docx-preview';
 import DOMPurify from 'dompurify';
 import * as mammoth from 'mammoth';
+import '@vscode/codicons/dist/codicon.css';
 import './styles.css';
 
-type RenderMode = 'visual' | 'text';
-type PageTheme = 'paper' | 'sepia' | 'dark';
+type ViewMode = 'page' | 'reading';
+type PaperTone = 'white' | 'sepia' | 'night';
 
 interface ViewerSettings {
-  defaultMode: RenderMode;
+  defaultView: ViewMode;
   defaultZoom: number;
-  defaultPageTheme: PageTheme;
+  defaultPaperTone: PaperTone;
 }
 
 interface ViewerState {
-  mode: RenderMode;
+  mode: ViewMode;
   zoom: number;
-  pageTheme: PageTheme;
+  paperTone: PaperTone;
 }
 
 interface VsCodeApi {
@@ -27,7 +28,7 @@ interface VsCodeApi {
 declare function acquireVsCodeApi(): VsCodeApi;
 
 const vscode = acquireVsCodeApi();
-const PAGE_THEMES: PageTheme[] = ['paper', 'sepia', 'dark'];
+const PAPER_TONES: PaperTone[] = ['white', 'sepia', 'night'];
 const ZOOM_STEP = 10;
 const ZOOM_MIN = 25;
 const ZOOM_MAX = 400;
@@ -35,7 +36,7 @@ const ZOOM_MAX = 400;
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
   const found = document.getElementById(id);
   if (!found) {
-    throw new Error(`GitDoc webview is missing #${id}`);
+    throw new Error(`DocDiff webview is missing #${id}`);
   }
   return found as T;
 }
@@ -54,24 +55,25 @@ const textContainer = el('text-container');
 const modeVisualButton = el<HTMLButtonElement>('mode-visual');
 const modeTextButton = el<HTMLButtonElement>('mode-text');
 const zoomResetButton = el<HTMLButtonElement>('zoom-reset');
-const themeButton = el<HTMLButtonElement>('page-theme-button');
+const themeButton = el<HTMLButtonElement>('paper-tone-button');
+const paperToneLabel = el('paper-tone-label');
 
-let state: ViewerState = { mode: 'visual', zoom: 100, pageTheme: 'paper' };
+let state: ViewerState = { mode: 'page', zoom: 100, paperTone: 'white' };
 let currentBuffer: ArrayBuffer | undefined;
 let visualRendered = false;
 let textRendered = false;
 
 restoreState();
-applyPageTheme(state.pageTheme);
+applyPaperTone(state.paperTone);
 applyZoom(state.zoom);
 updateModeButtons(state.mode);
 
-modeVisualButton.addEventListener('click', () => void switchMode('visual'));
-modeTextButton.addEventListener('click', () => void switchMode('text'));
+modeVisualButton.addEventListener('click', () => void switchMode('page'));
+modeTextButton.addEventListener('click', () => void switchMode('reading'));
 el('zoom-in').addEventListener('click', () => applyZoom(state.zoom + ZOOM_STEP));
 el('zoom-out').addEventListener('click', () => applyZoom(state.zoom - ZOOM_STEP));
 zoomResetButton.addEventListener('click', () => applyZoom(100));
-themeButton.addEventListener('click', () => applyPageTheme(nextPageTheme()));
+themeButton.addEventListener('click', () => applyPaperTone(nextPaperTone()));
 el('retry-button').addEventListener('click', () => {
   showLoading('Reloading document...');
   vscode.postMessage({ type: 'retry' });
@@ -95,8 +97,8 @@ window.addEventListener('keydown', (event) => {
 
 window.addEventListener('message', (event: MessageEvent) => {
   handleMessage(event.data).catch((error: unknown) => {
-    console.error('GitDoc could not process a host message:', error);
-    showError('GitDoc could not render this document.');
+    console.error('DocDiff could not process a host message:', error);
+    showError('DocDiff could not render this document.');
   });
 });
 
@@ -108,13 +110,13 @@ async function handleMessage(message: Record<string, unknown>): Promise<void> {
       await acceptDocument(message);
       break;
     case 'hostError':
-      showError(typeof message.message === 'string' ? message.message : 'GitDoc could not reload the document.');
+      showError(typeof message.message === 'string' ? message.message : 'DocDiff could not reload the document.');
       break;
-    case 'toggleMode':
-      await switchMode(state.mode === 'visual' ? 'text' : 'visual');
+    case 'switchView':
+      await switchMode(state.mode === 'page' ? 'reading' : 'page');
       break;
-    case 'cyclePageTheme':
-      applyPageTheme(nextPageTheme());
+    case 'cyclePaperTone':
+      applyPaperTone(nextPaperTone());
       break;
     case 'zoomIn':
       applyZoom(state.zoom + ZOOM_STEP);
@@ -137,7 +139,7 @@ async function acceptDocument(message: Record<string, unknown>): Promise<void> {
     return;
   }
   if (!restoredFromState && settings) {
-    state = { mode: settings.defaultMode, zoom: settings.defaultZoom, pageTheme: settings.defaultPageTheme };
+    state = { mode: settings.defaultView, zoom: settings.defaultZoom, paperTone: settings.defaultPaperTone };
   }
   restoredFromState = true;
 
@@ -149,7 +151,7 @@ async function acceptDocument(message: Record<string, unknown>): Promise<void> {
   textContainer.replaceChildren();
   fileName.textContent = typeof message.fileName === 'string' ? message.fileName : 'Word document';
   fileSize.textContent = typeof message.fileSize === 'number' ? formatSize(message.fileSize) : '';
-  applyPageTheme(state.pageTheme);
+  applyPaperTone(state.paperTone);
   applyZoom(state.zoom);
   updateModeButtons(state.mode);
   showLoading(message.reload ? 'Document changed. Rendering again...' : 'Rendering document...');
@@ -158,7 +160,7 @@ async function acceptDocument(message: Record<string, unknown>): Promise<void> {
 
 let restoredFromState = false;
 
-async function switchMode(mode: RenderMode): Promise<void> {
+async function switchMode(mode: ViewMode): Promise<void> {
   state = { ...state, mode };
   persistState();
   updateModeButtons(mode);
@@ -167,42 +169,42 @@ async function switchMode(mode: RenderMode): Promise<void> {
   }
 }
 
-async function renderMode(mode: RenderMode): Promise<void> {
+async function renderMode(mode: ViewMode): Promise<void> {
   if (!currentBuffer) {
     return;
   }
   try {
-    if (mode === 'visual' && !visualRendered) {
+    if (mode === 'page' && !visualRendered) {
       zoomFrame.classList.remove('hidden');
       visualContainer.classList.remove('hidden');
       textContainer.classList.add('hidden');
       await renderVisual(currentBuffer);
       visualRendered = true;
     }
-    if (mode === 'text' && !textRendered) {
+    if (mode === 'reading' && !textRendered) {
       await renderText(currentBuffer);
       textRendered = true;
     }
-    visualContainer.classList.toggle('hidden', mode !== 'visual');
-    textContainer.classList.toggle('hidden', mode !== 'text');
+    visualContainer.classList.toggle('hidden', mode !== 'page');
+    textContainer.classList.toggle('hidden', mode !== 'reading');
     showContent();
   } catch (error: unknown) {
-    console.error('GitDoc could not render the document:', error);
+    console.error('DocDiff could not render the document:', error);
     showError(toRenderError(error));
   }
 }
 
 async function renderVisual(buffer: ArrayBuffer): Promise<void> {
   visualContainer.replaceChildren();
-  let styleEl = document.getElementById('gitdoc-docx-styles');
+  let styleEl = document.getElementById('dd-docx-styles');
   if (!styleEl) {
     styleEl = document.createElement('div');
-    styleEl.id = 'gitdoc-docx-styles';
+    styleEl.id = 'dd-docx-styles';
     document.head.appendChild(styleEl);
   }
   styleEl.replaceChildren();
   await renderAsync(buffer, visualContainer, styleEl, {
-    className: 'gitdoc-visual',
+    className: 'dd-visual',
     inWrapper: true,
     ignoreWidth: false,
     ignoreHeight: false,
@@ -225,16 +227,16 @@ async function renderText(buffer: ArrayBuffer): Promise<void> {
   textContainer.innerHTML = DOMPurify.sanitize(result.value, { USE_PROFILES: { html: true } });
 }
 
-function nextPageTheme(): PageTheme {
-  const index = PAGE_THEMES.indexOf(state.pageTheme);
-  return PAGE_THEMES[(index + 1) % PAGE_THEMES.length] as PageTheme;
+function nextPaperTone(): PaperTone {
+  const index = PAPER_TONES.indexOf(state.paperTone);
+  return PAPER_TONES[(index + 1) % PAPER_TONES.length] as PaperTone;
 }
 
-function applyPageTheme(theme: PageTheme): void {
-  state = { ...state, pageTheme: theme };
+function applyPaperTone(theme: PaperTone): void {
+  state = { ...state, paperTone: theme };
   persistState();
-  app.dataset.pageTheme = theme;
-  themeButton.textContent = `Theme: ${theme}`;
+  app.dataset.paperTone = theme;
+  paperToneLabel.textContent = theme;
 }
 
 function applyZoom(value: number): void {
@@ -246,9 +248,9 @@ function applyZoom(value: number): void {
   zoomResetButton.textContent = `${clamped}%`;
 }
 
-function updateModeButtons(mode: RenderMode): void {
-  modeVisualButton.setAttribute('aria-pressed', String(mode === 'visual'));
-  modeTextButton.setAttribute('aria-pressed', String(mode === 'text'));
+function updateModeButtons(mode: ViewMode): void {
+  modeVisualButton.setAttribute('aria-pressed', String(mode === 'page'));
+  modeTextButton.setAttribute('aria-pressed', String(mode === 'reading'));
 }
 
 function persistState(): void {
@@ -287,7 +289,7 @@ function toRenderError(error: unknown): string {
   if (error instanceof Error && /zip|central directory|end of data|invalid/i.test(error.message)) {
     return 'This file appears to be corrupted or is not a valid Word document.';
   }
-  return 'GitDoc could not render this document.';
+  return 'DocDiff could not render this document.';
 }
 
 function decodeBase64(value: string): Uint8Array {

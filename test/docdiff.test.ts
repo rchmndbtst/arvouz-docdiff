@@ -1,4 +1,4 @@
-// Smallest self-check for the two pieces of real logic behind GitDoc's git
+// Smallest self-check for the two pieces of real logic behind DocDiff's git
 // story: converting a docx to diff-friendly text, and merging .gitattributes
 // idempotently. Run with `node --test test/` (Node 22.6+ strips TS types
 // natively, so this needs no build step and no test framework).
@@ -45,16 +45,16 @@ void test('docxToDiffText puts one paragraph per line, so a one-word edit is a o
   assert.notEqual(beforeLines[0], afterLines[0]);
 });
 
-void test('missingAttributeLines adds the diff=word lines once and is idempotent', () => {
+void test('missingAttributeLines adds the diff=docdiff lines once and is idempotent', () => {
   const first = missingAttributeLines('');
-  assert.match(first, /\*\.docx diff=word/);
-  assert.match(first, /\*\.docm diff=word/);
+  assert.match(first, /\*\.docx diff=docdiff/);
+  assert.match(first, /\*\.docm diff=docdiff/);
   assert.equal(missingAttributeLines(`existing content\n${first}`), '');
 });
 
 void test('missingAttributeLines only adds what is missing, keeping unrelated lines untouched', () => {
-  const partial = 'custom.bin binary\n*.docx diff=word\n';
+  const partial = 'custom.bin binary\n*.docx diff=docdiff\n';
   const addition = missingAttributeLines(partial);
-  assert.doesNotMatch(addition, /\*\.docx diff=word/);
-  assert.match(addition, /\*\.docm diff=word/);
+  assert.doesNotMatch(addition, /\*\.docx diff=docdiff/);
+  assert.match(addition, /\*\.docm diff=docdiff/);
 });
