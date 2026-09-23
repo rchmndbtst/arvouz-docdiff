@@ -1,6 +1,7 @@
 {
   "name": "arvouz-gitdoc",
   "displayName": "GitDoc",
+  "icon": "images/icon.png",
   "description": "View Word documents in VS Code with diffs that actually work in Git Graph, GitLens and the CLI.",
   "version": "0.1.0",
   "publisher": "arvouz",

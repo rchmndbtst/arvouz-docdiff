@@ -16,3 +16,4 @@ tsconfig*.json
 .gitignore
 .gitattributes
 CLAUDE.md
+images/icon.svg
