@@ -51,8 +51,7 @@
       {
         "command": "gitdoc.compareWithHead",
         "title": "Compare with HEAD",
-        "category": "GitDoc",
-        "enablement": "activeCustomEditorId == gitdoc.docxViewer || resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm"
+        "category": "GitDoc"
       },
       {
         "command": "gitdoc.enableGitTextDiff",
@@ -62,8 +61,7 @@
       {
         "command": "gitdoc.writeMirror",
         "title": "Write Markdown Mirror",
-        "category": "GitDoc",
-        "enablement": "activeCustomEditorId == gitdoc.docxViewer || resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm"
+        "category": "GitDoc"
       },
       {
         "command": "gitdoc.writeMirrors",
@@ -134,12 +132,12 @@
       "scm/resourceState/context": [
         {
           "command": "gitdoc.compareWithHead",
-          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
+          "when": "true",
           "group": "navigation@1"
         },
         {
           "command": "gitdoc.writeMirror",
-          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
+          "when": "true",
           "group": "navigation@2"
         }
       ]
