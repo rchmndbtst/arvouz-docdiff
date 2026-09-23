@@ -34,14 +34,14 @@ npm run check-types        # tsc --noEmit against both the extension-host and we
 npm run lint               # eslint src webview-src test
 npm test                   # node --experimental-strip-types --test "test/**/*.test.ts"
 npm run verify              # lint + check-types + test (also what vsce runs before packaging)
-npm run package             # build + vsce package -> arvouz-gitdoc-<version>.vsix
+npm run package             # build + vsce package -> arvouz-docdiff-<version>.vsix
 ```
 
-Run a single test by name: `node --experimental-strip-types --test --test-name-pattern="mirror" "test/**/*.test.ts"`.
+Run a single test by name: `node --experimental-strip-types --test --test-name-pattern="missingAttributeLines" "test/**/*.test.ts"`.
 
 Tests run directly against the `.ts` sources under Node's built-in type stripping (Node 22.6+/24) — no test framework, no build step. Relative imports in `test/*.test.ts` must include the explicit `.ts` extension (Node's ESM resolver requires it); omitting it fails with `ERR_MODULE_NOT_FOUND` even though `tsc` won't complain.
 
-To try the extension in a real VS Code window: `npm run package && code --install-extension arvouz-gitdoc-*.vsix`, then open any `.docx`/`.docm`/`.dotx`/`.dotm` file.
+To try the extension in a real VS Code window: `npm run package && code --install-extension arvouz-docdiff-*.vsix`, then open any `.docx`/`.docm`/`.dotx`/`.dotm` file.
 
 ## Architecture
 
@@ -53,16 +53,16 @@ Three esbuild entry points, defined in `esbuild.mjs`, share no runtime code path
 
 ### The git-diff story is two independent mechanisms, not one
 
-This project's reason for existing over a plain docx viewer is that git (and everything built on it) reports a Word document as `Binary files differ`. Two separate, non-overlapping fixes exist for this, implemented in `src/gitAttributes.ts` + `src/enableGitTextDiff.ts` and `src/mirror.ts` respectively:
+This project's reason for existing over a plain docx viewer is that git (and everything built on it) reports a Word document as `Binary files differ`. Two separate, non-overlapping fixes exist for this, implemented in `src/gitAttributes.ts` + `src/setupGitTextDiff.ts` and `src/companion.ts` respectively:
 
-1. **`textconv`** (`enableGitTextDiff.ts`): writes a `diff=word` `.gitattributes` entry and a `git config diff.word.textconv` pointing at `dist/textconv.cjs`. This only affects tools that run a real `git diff`/`git log -p`/`git show <commit>` — i.e., the CLI.
-2. **Markdown mirrors** (`mirror.ts`): an optional `<name>.docx.md` file written beside the document, kept in sync on save once created. This is what makes Git Graph, GitLens, and GitHub/GitLab PRs show a real diff, because those tools fetch a file's blob at a revision directly (`git show <rev>:<path>`) rather than running a diff, and a direct blob read never applies `textconv` — only an ordinary tracked text file works there.
+1. **`textconv`** (`setupGitTextDiff.ts`): writes a `diff=docdiff` `.gitattributes` entry and a `git config diff.docdiff.textconv` pointing at a copy of `dist/textconv.cjs` in the extension's global storage (the install folder is versioned and deleted on update; `refreshTextconv` re-copies it on every activation). This only affects tools that run a real `git diff`/`git log -p`/`git show <commit>` — i.e., the CLI.
+2. **Markdown companions** (`companion.ts`): an optional `<name>.docx.md` file written beside the document, kept in sync on save once created. This is what makes Git Graph, GitLens, and GitHub/GitLab PRs show a real diff, because those tools fetch a file's blob at a revision directly (`git show <rev>:<path>`) rather than running a diff, and a direct blob read never applies `textconv` — only an ordinary tracked text file works there.
 
-Neither mechanism is created without an explicit command (`GitDoc: Enable Readable Git Diffs`, `GitDoc: Write Markdown Mirror(s)`) — see `mirror.ts`'s module comment for why. `src/gitCompare.ts` is a third, separate path (VS Code's own diff editor via a virtual `gitdoc-diff:` scheme), unrelated to either.
+Neither mechanism is created without an explicit command (`DocDiff: Set Up Git Text Diffs for This Repository`, `DocDiff: Write Markdown Companion(s)`) — see `companion.ts`'s module comment for why. `src/gitCompare.ts` is a third, separate path (VS Code's own diff editor via a virtual `docdiff-rev:` scheme), unrelated to either.
 
 ### Shared conversion, one function
 
-`src/convert.ts`'s `docxToDiffText` is the single converter behind the mirror, the `textconv` script, and `gitCompare.ts`'s diff-editor content provider — all three must treat a document the same way for a diff to make sense across them. Don't add a second conversion path; extend this one.
+`src/convert.ts`'s `docxToDiffText` is the single converter behind the companion, the `textconv` script, and `gitCompare.ts`'s diff-editor content provider — all three must treat a document the same way for a diff to make sense across them. Don't add a second conversion path; extend this one.
 
 ### Reused upstream fix
 
