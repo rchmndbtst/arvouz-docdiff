@@ -45,8 +45,8 @@ export async function setupGitTextDiff(context: vscode.ExtensionContext): Promis
     return;
   }
 
-  const scriptPath = vscode.Uri.joinPath(context.extensionUri, 'dist', 'textconv.cjs').fsPath;
   try {
+    const scriptPath = await installTextconv(context);
     await git(['config', 'diff.docdiff.textconv', `node "${scriptPath}"`], root);
     await git(['config', 'diff.docdiff.cachetextconv', 'true'], root);
     await ensureAttributes(root);
@@ -56,6 +56,33 @@ export async function setupGitTextDiff(context: vscode.ExtensionContext): Promis
   } catch (error: unknown) {
     getLog().error('Enabling readable git diffs failed.', error);
     void vscode.window.showWarningMessage('DocDiff: could not configure git. See the DocDiff log.');
+  }
+}
+
+/**
+ * git config must not point into the extension's own folder: VS Code deletes
+ * that folder (its name carries the version) on every update, which would
+ * leave `git diff` failing. A copy in global storage has a stable path and is
+ * refreshed on every activation by refreshTextconv.
+ */
+async function installTextconv(context: vscode.ExtensionContext): Promise<string> {
+  const target = vscode.Uri.joinPath(context.globalStorageUri, 'textconv.cjs');
+  await vscode.workspace.fs.createDirectory(context.globalStorageUri);
+  await vscode.workspace.fs.copy(vscode.Uri.joinPath(context.extensionUri, 'dist', 'textconv.cjs'), target, { overwrite: true });
+  return target.fsPath;
+}
+
+/** Keeps an already-installed textconv copy in step with this version of the extension. */
+export async function refreshTextconv(context: vscode.ExtensionContext): Promise<void> {
+  try {
+    await vscode.workspace.fs.stat(vscode.Uri.joinPath(context.globalStorageUri, 'textconv.cjs'));
+  } catch {
+    return; // never set up; nothing to refresh
+  }
+  try {
+    await installTextconv(context);
+  } catch (error: unknown) {
+    getLog().error('Refreshing the textconv script failed.', error);
   }
 }
 

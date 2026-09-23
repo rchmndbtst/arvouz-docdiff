@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { DocxEditorProvider } from './docxEditorProvider';
-import { setupGitTextDiff } from './setupGitTextDiff';
+import { refreshTextconv, setupGitTextDiff } from './setupGitTextDiff';
 import { diffWithHead, DIFF_SCHEME, DocxDiffContentProvider } from './gitCompare';
 import { getLog } from './log';
 import { writeCompanionForCommand, writeWorkspaceCompanions } from './companion';
 
 export function activate(context: vscode.ExtensionContext): void {
   const provider = DocxEditorProvider.register(context);
+  void refreshTextconv(context);
 
   const diffProvider = new DocxDiffContentProvider();
   context.subscriptions.push(
