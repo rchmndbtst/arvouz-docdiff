@@ -1,82 +1,83 @@
-# GitDoc
+# DocDiff — Word Viewer & Git Diffs
 
-View Word documents (`.docx`, `.docm`, `.dotx`, `.dotm`) directly in VS Code — and unlike Word documents everywhere else in git, get a diff that actually reads.
+**Stop seeing `Binary files differ`.** DocDiff opens Word documents (`.docx`, `.docm`, `.dotx`, `.dotm`) right inside VS Code, and makes every git tool you already use show *what changed* in them: the terminal, Source Control, Git Graph, GitLens, and GitHub/GitLab pull requests.
 
-## The problem this solves
+## Why it exists
 
-Git reports a `.docx` as `Binary files differ`. So does Git Graph, GitLens, and every pull request that touches one. GitDoc fixes both ends:
+Git treats a Word file as an opaque blob, so its history shows only that something changed, not what. DocDiff tackles that from three sides:
 
-1. **A viewer.** A custom editor renders the page layout (`docx-preview`) or a clean semantic view (`mammoth`), so you never leave VS Code to read one.
-2. **Diffs that work everywhere, not just in this extension.** Two independent mechanisms, because no single one covers every tool:
-   - **`GitDoc: Enable Readable Git Diffs`** configures a git [`textconv`](https://git-scm.com/docs/gitattributes#_generating_diff_text) driver for Word files in the current repository. From then on, plain `git diff`, `git log -p`, and `git show <commit>` print the document as text — no extension required, works in any terminal, any CI log, any tool that shells out to a real diff.
-   - **Markdown mirrors** (`GitDoc: Write Markdown Mirror(s)`) write a `.docx.md` companion file beside a document. Once committed, it's an ordinary tracked text file — so **Git Graph, GitLens, GitHub/GitLab pull requests, and every other tool that reads git history shows a real, line-level diff automatically**, because none of them need to know GitDoc exists. `textconv` doesn't reach this case: most GUIs fetch a file's blob at a revision directly rather than running `git diff`, and blob reads skip `textconv` by design. GitDoc never creates a mirror without being asked; once one exists, it's kept in sync on every save (`gitdoc.markdownMirror: onChange`, the default).
+| Where you look at history | What DocDiff gives you | How |
+| --- | --- | --- |
+| VS Code itself | **Diff with Last Commit**: a side-by-side text diff in VS Code's own diff editor | Converts both revisions to text on the fly |
+| `git diff`, `git log -p`, `git show`, CI logs | Real line-level text diffs in any terminal | A git [`textconv`](https://git-scm.com/docs/gitattributes#_generating_diff_text) driver, set up once per repository |
+| Git Graph, GitLens, pull requests on GitHub/GitLab | Real line-level diffs, with nothing to install for reviewers | A **Markdown companion** (`report.docx` → `report.docx.md`) committed next to the document |
 
-Both are additive to your repository's own git history — GitDoc doesn't touch anything until you run one of these commands.
+Why two git mechanisms? GUIs and code-review sites read a file's content at a revision directly (`git show <rev>:<path>`), and git never runs `textconv` for that. A committed text companion is the one thing every tool can already diff.
 
-## Using it
+DocDiff never touches your repository until you run one of its commands.
 
-1. Open a `.docx` — GitDoc is the default editor for all four Word extensions.
-2. **Visual** shows the Word page layout; **Text** shows a clean reading view. Toggle with the toolbar or `GitDoc: Toggle Visual/Text Mode`.
-3. Zoom with the toolbar or `Ctrl/Cmd` + `=`/`-`/`0`. Cycle the page background (paper/sepia/dark) with the theme button.
-4. Right-click a `.docx` in the Explorer (or run from the Command Palette):
-   - **Compare with HEAD** — opens the working copy against the last commit in VS Code's own diff editor.
-   - **Write Markdown Mirror** — writes/updates a `.docx.md` beside this document.
-   - **Write Markdown Mirrors (Workspace)** — does the same for every Word document in the workspace, after confirming how many.
-5. Run **GitDoc: Enable Readable Git Diffs** once per repository to turn on the `textconv` driver.
+## Quick start
+
+1. Install **DocDiff** from the Marketplace, then open any `.docx`. DocDiff becomes the default viewer for Word files.
+2. Switch between **Page** view (the Word layout) and **Reading** view (clean text that follows your theme) with the toolbar or `Ctrl+Alt+V` / `Cmd+Alt+V`.
+3. In a git repository, click the compare icon in the editor title bar (**Diff with Last Commit**) to see what changed since the last commit.
+4. Want diffs in the terminal? Run **DocDiff: Set Up Git Text Diffs for This Repository** once.
+5. Want diffs in pull requests and Git Graph? Right-click the document and choose **DocDiff: Write Markdown Companion**, then commit the `.docx.md` file alongside it. DocDiff keeps it up to date every time the document changes.
 
 ## Commands
 
-| Command | Purpose |
-| --- | --- |
-| `GitDoc: Open with GitDoc` | Open the selected file in the viewer |
-| `GitDoc: Compare with HEAD` | Diff the working copy against HEAD in VS Code's diff editor |
-| `GitDoc: Enable Readable Git Diffs (textconv)` | Configure this repository's `.gitattributes` + git config so `git diff`/`git log -p`/`git show` read Word documents as text |
-| `GitDoc: Write Markdown Mirror` | Write/refresh a `.docx.md` beside the current document |
-| `GitDoc: Write Markdown Mirrors (Workspace)` | Same, for every Word document in the workspace |
-| `GitDoc: Toggle Visual/Text Mode` | Switch rendering engines |
-| `GitDoc: Change Page Theme` | Cycle paper / sepia / dark |
-| `GitDoc: Zoom In / Out / Reset` | Zoom the page |
-| `GitDoc: Show Log` | Open the GitDoc log channel |
+All commands are under the **DocDiff** category in the Command Palette.
+
+| Command | What it does | Also in |
+| --- | --- | --- |
+| Open in DocDiff Viewer | Open a Word file in the viewer | Explorer context menu |
+| Diff with Last Commit | Text diff of the working copy against `HEAD` | Editor title, Explorer, Source Control |
+| Set Up Git Text Diffs for This Repository | Adds `diff=docdiff` lines to `.gitattributes` and registers the textconv driver in the repo's git config | |
+| Write Markdown Companion | Writes or refreshes `<name>.docx.md` beside the document | Editor title `…` menu, Explorer, Source Control |
+| Write Markdown Companions for Whole Workspace | The same for every Word file in the workspace (asks first) | |
+| Switch Page / Reading View | Toggle the rendering engine (`Ctrl/Cmd+Alt+V`) | Editor title |
+| Cycle Paper Tone | White → sepia → night behind Page view | Editor title `…` menu, toolbar |
+| Zoom In / Zoom Out / Actual Size (100%) | `Ctrl/Cmd` + `=` / `-` / `0` | Toolbar |
+| Show Output | Open DocDiff's log | |
 
 ## Settings
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `gitdoc.defaultMode` | `visual` | Initial rendering mode |
-| `gitdoc.defaultZoom` | `100` | Initial zoom, 25–400 |
-| `gitdoc.defaultPageTheme` | `paper` | Visual-mode page background |
-| `gitdoc.maxFileSizeMb` | `100` | Largest file GitDoc will open |
-| `gitdoc.autoReload` | `true` | Reload when the file changes on disk |
-| `gitdoc.markdownMirror` | `onChange` | Keep an existing `.docx.md` mirror current on every save; never creates one |
+| `docdiff.defaultView` | `page` | `page` or `reading` |
+| `docdiff.defaultZoom` | `100` | Opening zoom, 25–400 % |
+| `docdiff.defaultPaperTone` | `white` | `white`, `sepia` or `night` |
+| `docdiff.maxFileSizeMb` | `100` | Largest document DocDiff will open |
+| `docdiff.reloadOnChange` | `true` | Re-render when the file changes on disk |
+| `docdiff.autoUpdateCompanions` | `true` | Keep existing `.docx.md` companions in sync; never creates one on its own |
 
-## How it behaves
+## Privacy and safety
 
-- All four OOXML Word formats are the same package format; macros are never executed.
-- Rendering runs entirely inside the sandboxed webview — no network request, no telemetry.
-- If Visual mode can't render a document, it's a rendering-engine limitation, not a crash: switch to Text mode.
+- Everything runs locally, in a sandboxed webview with a strict Content Security Policy. No network requests, no telemetry.
+- Macros in `.docm`/`.dotm` files are never executed.
+- The textconv driver is a self-contained script copied into VS Code's extension storage, so it keeps working across DocDiff updates. It needs `node` on your `PATH`.
 
-## Known limitations
+## Limitations
 
-- `.doc` (the legacy binary format) is not supported.
-- Text mode shows tracked changes as accepted — `mammoth` drops deletions and inlines insertions.
-- `Compare with HEAD` covers HEAD and the working tree only; comparing two arbitrary revisions isn't implemented yet.
-- Password-protected documents are not supported.
-- `textconv` covers the CLI and tools that run a real `git diff`/`git show <commit>`. Tools that read a file's blob at a revision directly (most GUI "click a file in a commit" views, including Git Graph's) need the Markdown mirror instead — see above.
+- Legacy binary `.doc` files and password-protected documents are not supported.
+- Reading view and all text diffs show tracked changes as if accepted.
+- **Diff with Last Commit** compares `HEAD` with the working tree only, not two arbitrary revisions.
+- If Page view cannot lay a document out faithfully, that is a rendering-engine limit. Reading view will still show the content.
 
-## Development
+## Contributing
 
 ```bash
-npm install
-npm run verify   # lint + type-check + test
-npm run build
+npm install        # also applies the docx-preview patch
+npm run verify     # lint + type-check + tests
+npm run package    # build a .vsix
 ```
 
-Press `F5` in VS Code to start the Extension Development Host.
+Press `F5` in VS Code to launch an Extension Development Host. Issues and pull requests are welcome at [github.com/rchmndbtst/arvouz-docdiff](https://github.com/rchmndbtst/arvouz-docdiff).
 
-## Credit
+## Acknowledgements
 
-GitDoc's viewer is built on the same open-source renderers as [show-docx](https://github.com/showdocx/show-docx) (`docx-preview`, `mammoth`), and reuses its `docx-preview` shape/canvas rendering patch. The git-diff story — `textconv` plus default-on mirror refresh — is GitDoc's own.
+Rendering is powered by [docx-preview](https://github.com/VolodymyrBaydalka/docxjs) (Page view) and [mammoth](https://github.com/mwilliamson/mammoth.js) (Reading view and all text diffs). A fix for `docx-preview` shape and canvas rendering is adapted from [show-docx](https://github.com/showdocx/show-docx) (MIT); see [LICENSE](LICENSE).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) © [Richmond Bautista](https://rbautista.pro)
