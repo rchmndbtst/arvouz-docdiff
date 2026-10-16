@@ -15,3 +15,8 @@ tsconfig*.json
 **/*.map
 .gitignore
 .gitattributes
+CLAUDE.md
+images/icon.svg
+chat/**
+.github/**
+*.vsix

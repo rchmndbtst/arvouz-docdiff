@@ -1,21 +1,33 @@
 {
-  "name": "arvouz-gitdoc",
-  "displayName": "GitDoc",
-  "description": "View Word documents in VS Code with diffs that actually work in Git Graph, GitLens and the CLI.",
-  "version": "0.1.0",
+  "name": "arvouz-docdiff",
+  "displayName": "DocDiff — Word Viewer & Git Diffs",
+  "description": "Read .docx files inside VS Code and get real, line-level diffs of Word documents in git, Git Graph, GitLens and pull requests.",
+  "version": "0.2.0",
   "publisher": "arvouz",
-  "license": "MIT",
   "author": {
-    "name": "Arvouz"
+    "name": "Richmond Bautista",
+    "url": "https://rbautista.pro"
+  },
+  "license": "MIT",
+  "pricing": "Free",
+  "icon": "images/icon.png",
+  "homepage": "https://github.com/rchmndbtst/arvouz-docdiff#readme",
+  "bugs": {
+    "url": "https://github.com/rchmndbtst/arvouz-docdiff/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/arvouz/arvouz-gitdoc.git"
+    "url": "https://github.com/rchmndbtst/arvouz-docdiff.git"
+  },
+  "galleryBanner": {
+    "color": "#1e2a3a",
+    "theme": "dark"
   },
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
+    "SCM Providers",
     "Visualization",
     "Other"
   ],
@@ -23,16 +35,18 @@
     "docx",
     "word",
     "git",
-    "git graph",
     "diff",
+    "git graph",
+    "gitlens",
+    "textconv",
     "viewer"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "customEditors": [
       {
-        "viewType": "gitdoc.docxViewer",
-        "displayName": "Word Document (GitDoc)",
+        "viewType": "docdiff.viewer",
+        "displayName": "DocDiff Word Viewer",
         "selector": [
           {
             "filenamePattern": "*.{docx,docm,dotx,dotm}"
@@ -43,167 +57,223 @@
     ],
     "commands": [
       {
-        "command": "gitdoc.openWith",
-        "title": "Open with GitDoc",
-        "category": "GitDoc"
+        "command": "docdiff.open",
+        "title": "Open in DocDiff Viewer",
+        "category": "DocDiff",
+        "icon": "$(preview)"
       },
       {
-        "command": "gitdoc.compareWithHead",
-        "title": "Compare with HEAD",
-        "category": "GitDoc",
-        "enablement": "activeCustomEditorId == gitdoc.docxViewer || resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm"
+        "command": "docdiff.diffWithHead",
+        "title": "Diff with Last Commit",
+        "category": "DocDiff",
+        "icon": "$(git-compare)"
       },
       {
-        "command": "gitdoc.enableGitTextDiff",
-        "title": "Enable Readable Git Diffs (textconv)",
-        "category": "GitDoc"
+        "command": "docdiff.setupGitTextDiff",
+        "title": "Set Up Git Text Diffs for This Repository",
+        "category": "DocDiff",
+        "icon": "$(terminal)"
       },
       {
-        "command": "gitdoc.writeMirror",
-        "title": "Write Markdown Mirror",
-        "category": "GitDoc",
-        "enablement": "activeCustomEditorId == gitdoc.docxViewer || resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm"
+        "command": "docdiff.writeCompanion",
+        "title": "Write Markdown Companion",
+        "category": "DocDiff",
+        "icon": "$(markdown)"
       },
       {
-        "command": "gitdoc.writeMirrors",
-        "title": "Write Markdown Mirrors (Workspace)",
-        "category": "GitDoc"
+        "command": "docdiff.writeCompanions",
+        "title": "Write Markdown Companions for Whole Workspace",
+        "category": "DocDiff"
       },
       {
-        "command": "gitdoc.toggleMode",
-        "title": "Toggle Visual/Text Mode",
-        "category": "GitDoc",
-        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+        "command": "docdiff.switchView",
+        "title": "Switch Page / Reading View",
+        "category": "DocDiff",
+        "icon": "$(book)",
+        "enablement": "activeCustomEditorId == docdiff.viewer"
       },
       {
-        "command": "gitdoc.cyclePageTheme",
-        "title": "Change Page Theme",
-        "category": "GitDoc",
-        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+        "command": "docdiff.cyclePaperTone",
+        "title": "Cycle Paper Tone",
+        "category": "DocDiff",
+        "icon": "$(color-mode)",
+        "enablement": "activeCustomEditorId == docdiff.viewer"
       },
       {
-        "command": "gitdoc.zoomIn",
+        "command": "docdiff.zoomIn",
         "title": "Zoom In",
-        "category": "GitDoc",
-        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+        "category": "DocDiff",
+        "icon": "$(zoom-in)",
+        "enablement": "activeCustomEditorId == docdiff.viewer"
       },
       {
-        "command": "gitdoc.zoomOut",
+        "command": "docdiff.zoomOut",
         "title": "Zoom Out",
-        "category": "GitDoc",
-        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+        "category": "DocDiff",
+        "icon": "$(zoom-out)",
+        "enablement": "activeCustomEditorId == docdiff.viewer"
       },
       {
-        "command": "gitdoc.zoomReset",
-        "title": "Reset Zoom",
-        "category": "GitDoc",
-        "enablement": "activeCustomEditorId == gitdoc.docxViewer"
+        "command": "docdiff.zoomReset",
+        "title": "Actual Size (100%)",
+        "category": "DocDiff",
+        "enablement": "activeCustomEditorId == docdiff.viewer"
       },
       {
-        "command": "gitdoc.showLog",
-        "title": "Show Log",
-        "category": "GitDoc"
+        "command": "docdiff.showOutput",
+        "title": "Show Output",
+        "category": "DocDiff",
+        "icon": "$(output)"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "docdiff.switchView",
+          "when": "activeCustomEditorId == docdiff.viewer"
+        },
+        {
+          "command": "docdiff.cyclePaperTone",
+          "when": "activeCustomEditorId == docdiff.viewer"
+        },
+        {
+          "command": "docdiff.zoomIn",
+          "when": "activeCustomEditorId == docdiff.viewer"
+        },
+        {
+          "command": "docdiff.zoomOut",
+          "when": "activeCustomEditorId == docdiff.viewer"
+        },
+        {
+          "command": "docdiff.zoomReset",
+          "when": "activeCustomEditorId == docdiff.viewer"
+        }
+      ],
       "explorer/context": [
         {
-          "command": "gitdoc.openWith",
-          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
+          "command": "docdiff.open",
+          "when": "resourceExtname =~ /^\\.(docx|docm|dotx|dotm)$/i",
           "group": "navigation@20"
         },
         {
-          "command": "gitdoc.compareWithHead",
-          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
-          "group": "navigation@21"
+          "command": "docdiff.diffWithHead",
+          "when": "resourceExtname =~ /^\\.(docx|docm|dotx|dotm)$/i",
+          "group": "7_docdiff@1"
         },
         {
-          "command": "gitdoc.writeMirror",
-          "when": "resourceExtname == .docx || resourceExtname == .docm || resourceExtname == .dotx || resourceExtname == .dotm",
-          "group": "navigation@22"
+          "command": "docdiff.writeCompanion",
+          "when": "resourceExtname =~ /^\\.(docx|docm|dotx|dotm)$/i",
+          "group": "7_docdiff@2"
         }
       ],
       "editor/title": [
         {
-          "command": "gitdoc.compareWithHead",
-          "when": "activeCustomEditorId == gitdoc.docxViewer",
-          "group": "navigation"
+          "command": "docdiff.diffWithHead",
+          "when": "activeCustomEditorId == docdiff.viewer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "docdiff.switchView",
+          "when": "activeCustomEditorId == docdiff.viewer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "docdiff.writeCompanion",
+          "when": "activeCustomEditorId == docdiff.viewer",
+          "group": "1_docdiff@1"
+        },
+        {
+          "command": "docdiff.cyclePaperTone",
+          "when": "activeCustomEditorId == docdiff.viewer",
+          "group": "1_docdiff@2"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "docdiff.diffWithHead",
+          "group": "navigation@1"
+        },
+        {
+          "command": "docdiff.writeCompanion",
+          "group": "navigation@2"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "gitdoc.zoomIn",
+        "command": "docdiff.zoomIn",
         "key": "ctrl+=",
         "mac": "cmd+=",
-        "when": "activeCustomEditorId == gitdoc.docxViewer"
+        "when": "activeCustomEditorId == docdiff.viewer"
       },
       {
-        "command": "gitdoc.zoomOut",
+        "command": "docdiff.zoomOut",
         "key": "ctrl+-",
         "mac": "cmd+-",
-        "when": "activeCustomEditorId == gitdoc.docxViewer"
+        "when": "activeCustomEditorId == docdiff.viewer"
       },
       {
-        "command": "gitdoc.zoomReset",
+        "command": "docdiff.zoomReset",
         "key": "ctrl+0",
         "mac": "cmd+0",
-        "when": "activeCustomEditorId == gitdoc.docxViewer"
+        "when": "activeCustomEditorId == docdiff.viewer"
+      },
+      {
+        "command": "docdiff.switchView",
+        "key": "ctrl+alt+v",
+        "mac": "cmd+alt+v",
+        "when": "activeCustomEditorId == docdiff.viewer"
       }
     ],
     "configuration": {
-      "title": "GitDoc",
+      "title": "DocDiff",
       "properties": {
-        "gitdoc.defaultMode": {
+        "docdiff.defaultView": {
           "type": "string",
-          "default": "visual",
+          "default": "page",
           "enum": [
-            "visual",
-            "text"
+            "page",
+            "reading"
           ],
-          "description": "Default rendering mode."
+          "enumDescriptions": [
+            "The Word page layout.",
+            "A clean, semantic reading view that follows your editor theme."
+          ],
+          "description": "View a document opens in."
         },
-        "gitdoc.defaultZoom": {
+        "docdiff.defaultZoom": {
           "type": "number",
           "default": 100,
           "minimum": 25,
           "maximum": 400,
-          "description": "Default zoom level in percent."
+          "description": "Zoom level, in percent, a document opens at."
         },
-        "gitdoc.defaultPageTheme": {
+        "docdiff.defaultPaperTone": {
           "type": "string",
-          "default": "paper",
+          "default": "white",
           "enum": [
-            "paper",
+            "white",
             "sepia",
-            "dark"
+            "night"
           ],
-          "description": "Background of the page in Visual mode."
+          "description": "Paper tone behind Page view."
         },
-        "gitdoc.maxFileSizeMb": {
+        "docdiff.maxFileSizeMb": {
           "type": "number",
           "default": 100,
           "minimum": 1,
           "maximum": 500,
-          "description": "Maximum DOCX file size that GitDoc will open."
+          "description": "Largest document, in MB, DocDiff will open."
         },
-        "gitdoc.autoReload": {
+        "docdiff.reloadOnChange": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically reload the preview when the DOCX file changes on disk."
+          "description": "Re-render an open document when its file changes on disk."
         },
-        "gitdoc.markdownMirror": {
-          "type": "string",
-          "default": "onChange",
-          "enum": [
-            "off",
-            "onChange"
-          ],
-          "enumDescriptions": [
-            "Do not keep Markdown mirrors up to date.",
-            "Rewrite a mirror when its document changes on disk. Only mirrors that already exist are updated; run \"GitDoc: Write Markdown Mirror(s)\" to create one."
-          ],
-          "description": "Keep a .md mirror of a document up to date, so Git Graph, GitLens, and pull requests can show a readable diff. GitDoc never creates a mirror on its own."
+        "docdiff.autoUpdateCompanions": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Rewrite a document's `.docx.md` Markdown companion whenever the document changes. Only companions that already exist are updated; DocDiff never creates one unless you run **DocDiff: Write Markdown Companion**."
         }
       }
     }
@@ -217,6 +287,7 @@
     "verify": "npm run lint && npm run check-types && npm run test",
     "vscode:prepublish": "npm run verify && npm run build",
     "package": "npm run build && vsce package --no-dependencies",
+    "install:local": "npm run package && code --install-extension arvouz-docdiff-$npm_package_version.vsix --force",
     "postinstall": "patch-package"
   },
   "dependencies": {
