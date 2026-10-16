@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Diff editor tabs opened from Git Graph, GitLens and Source Control now show the converted-text diff instead of two rendered viewers side by side.
+- Diff text now includes tables (as `| a | b |` rows), pictures (as `![alt](image:<content hash>)`, so a replaced image changes its line), headings, lists and links.
+- Added an `install:local` script that packages and installs the extension.
+
 ## 0.1.0
 
 First public release.
