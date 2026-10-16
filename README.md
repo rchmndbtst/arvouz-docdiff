@@ -1,4 +1,4 @@
-# DocDiff — Word Viewer & Git Diffs
+# DocDiff: Word Viewer & Git Diffs
 
 **Stop seeing `Binary files differ`.** DocDiff opens Word documents (`.docx`, `.docm`, `.dotx`, `.dotm`) right inside VS Code, and makes every git tool you already use show *what changed* in them: the terminal, Source Control, Git Graph, GitLens, and GitHub/GitLab pull requests.
 

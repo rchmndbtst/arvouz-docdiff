@@ -10,7 +10,7 @@ import { getLog } from './log';
  * need to know about DocDiff, because a companion is just an ordinary tracked
  * text file that git already knows how to diff.
  *
- * DocDiff never creates a companion on its own — only "Write Markdown Companion(s)"
+ * DocDiff never creates a companion on its own: only "Write Markdown Companion(s)"
  * does, after saying how many and where. Once a companion exists, it is kept
  * current on every save by default (`docdiff.autoUpdateCompanions`).
  */

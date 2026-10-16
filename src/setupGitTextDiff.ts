@@ -27,7 +27,7 @@ async function repoRoot(dir: string): Promise<string | undefined> {
 
 /**
  * Configures git so `git diff`, `git log -p` and `git show <commit>` print
- * readable text for a Word document instead of "Binary files differ" — the
+ * readable text for a Word document instead of "Binary files differ": the
  * standard git textconv mechanism, honoured by the CLI and by any GUI that
  * shells out to a real `git diff`/`git show <commit>` (rather than reading a
  * blob directly, which textconv does not cover; the Markdown companion commands
@@ -92,7 +92,7 @@ async function ensureAttributes(root: string): Promise<void> {
   try {
     existing = await readFile(attrPath, 'utf8');
   } catch {
-    // No .gitattributes yet — appendFile below creates it.
+    // No .gitattributes yet: appendFile below creates it.
   }
   const addition = missingAttributeLines(existing);
   if (addition !== '') {

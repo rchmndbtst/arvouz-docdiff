@@ -1,6 +1,6 @@
 {
   "name": "arvouz-docdiff",
-  "displayName": "DocDiff — Word Viewer & Git Diffs",
+  "displayName": "DocDiff: Word Viewer & Git Diffs",
   "description": "Read .docx files inside VS Code and get real, line-level diffs of Word documents in git, Git Graph, GitLens and pull requests.",
   "version": "0.2.0",
   "publisher": "arvouz",
