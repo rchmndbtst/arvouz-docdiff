@@ -58,3 +58,14 @@ void test('missingAttributeLines only adds what is missing, keeping unrelated li
   assert.doesNotMatch(addition, /\*\.docx diff=docdiff/);
   assert.match(addition, /\*\.docm diff=docdiff/);
 });
+
+void test('docxToDiffText makes tables and pictures visible lines', async () => {
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+  zip.file('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+  const cell = (t: string): string => `<w:tc><w:p><w:r><w:t>${t}</w:t></w:r></w:p></w:tc>`;
+  zip.file('word/document.xml', '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
+    + `<w:tbl><w:tr>${cell('A')}${cell('B')}</w:tr><w:tr>${cell('C')}${cell('D &amp; E')}</w:tr></w:tbl></w:body></w:document>`);
+  const text = await docxToDiffText(await zip.generateAsync({ type: 'uint8array' }));
+  assert.equal(text, '| A | B |\n| C | D & E |\n');
+});
