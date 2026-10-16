@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Page with folded corner (Word blue) -->
+  <path d="M56 20h108l52 52v152a12 12 0 0 1-12 12H56a12 12 0 0 1-12-12V32a12 12 0 0 1 12-12z" fill="#2B579A"/>
+  <path d="M164 20v40a12 12 0 0 0 12 12h40z" fill="#7FA6DB"/>
+  <!-- Text lines -->
+  <rect x="72" y="52" width="72" height="12" rx="6" fill="#fff" opacity=".9"/>
+  <rect x="72" y="80" width="112" height="12" rx="6" fill="#fff" opacity=".9"/>
+  <!-- Git branch graph (git orange) -->
+  <path d="M96 128v72" stroke="#F05032" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M168 152c0 28-72 20-72 48" stroke="#F05032" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <circle cx="96" cy="128" r="17" fill="#F05032" stroke="#fff" stroke-width="7"/>
+  <circle cx="96" cy="204" r="17" fill="#F05032" stroke="#fff" stroke-width="7"/>
+  <circle cx="168" cy="140" r="17" fill="#F05032" stroke="#fff" stroke-width="7"/>
+</svg>

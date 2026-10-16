@@ -1,4 +1,5 @@
 instr/
+chat/
 node_modules/
 dist/
 out/
