@@ -287,6 +287,7 @@
     "verify": "npm run lint && npm run check-types && npm run test",
     "vscode:prepublish": "npm run verify && npm run build",
     "package": "npm run build && vsce package --no-dependencies",
+    "install:local": "npm run package && code --install-extension arvouz-docdiff-$npm_package_version.vsix --force",
     "postinstall": "patch-package"
   },
   "dependencies": {
