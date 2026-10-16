@@ -6,3 +6,4 @@ out/
 out-webview/
 *.vsix
 .vscode-test/
+.~lock.*#
