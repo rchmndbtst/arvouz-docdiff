@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { DocxEditorProvider } from './docxEditorProvider';
 import { refreshTextconv, setupGitTextDiff } from './setupGitTextDiff';
-import { diffWithHead, DIFF_SCHEME, DocxDiffContentProvider } from './gitCompare';
+import { diffWithHead, DIFF_SCHEME, DocxDiffContentProvider, interceptDocumentDiffs } from './gitCompare';
 import { getLog } from './log';
 import { writeCompanionForCommand, writeWorkspaceCompanions } from './companion';
 
@@ -12,6 +12,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const diffProvider = new DocxDiffContentProvider();
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(DIFF_SCHEME, diffProvider),
+    interceptDocumentDiffs(diffProvider),
   );
 
   // A menu command's argument varies by where it was invoked from: the

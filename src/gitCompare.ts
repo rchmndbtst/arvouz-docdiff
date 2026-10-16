@@ -119,6 +119,64 @@ export async function readVsCodeGitUri(uri: vscode.Uri): Promise<Uint8Array> {
   return readAtRef(root, relative, ref);
 }
 
+const WORKING_TREE_HASH = /^0{40}$/;
+
+interface Revision {
+  readonly path: string;
+  readonly ref: string | undefined; // undefined = working tree
+}
+
+function jsonQuery(query: string, base64: boolean): Record<string, unknown> | undefined {
+  try {
+    return JSON.parse(base64 ? Buffer.from(query, 'base64').toString('utf8') : query) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Where a document URI's bytes really live. Git Graph and GitLens serve text
+ * through their own schemes, which corrupts a binary document, so their
+ * queries are decoded and the blob is read with `git show` instead.
+ * Git Graph: base64 `{repo, filePath, commit}`; GitLens: `{repoPath, path, ref}`.
+ */
+function revisionOf(uri: vscode.Uri): Revision | undefined {
+  if (uri.scheme === 'git-graph') {
+    const q = jsonQuery(uri.query, true);
+    if (typeof q?.repo !== 'string' || typeof q.filePath !== 'string' || typeof q.commit !== 'string') {
+      return undefined;
+    }
+    return { path: path.join(q.repo, q.filePath), ref: q.commit === 'UNCOMMITTED' ? undefined : q.commit };
+  }
+  if (uri.scheme === 'gitlens') {
+    const q = jsonQuery(uri.query, false);
+    const file = typeof q?.path === 'string' ? q.path : undefined;
+    if (file === undefined || typeof q?.ref !== 'string') {
+      return undefined;
+    }
+    const ref = q.ref === '' || WORKING_TREE_HASH.test(q.ref) ? undefined : q.ref;
+    return { path: path.isAbsolute(file) || typeof q.repoPath !== 'string' ? file : path.join(q.repoPath, file), ref };
+  }
+  return undefined;
+}
+
+/** Bytes of a document at whatever revision the URI (any supported scheme) names. */
+async function readBytes(uri: vscode.Uri): Promise<Uint8Array> {
+  if (uri.scheme === 'git') {
+    return readVsCodeGitUri(uri);
+  }
+  const revision = revisionOf(uri);
+  if (!revision || revision.ref === undefined) {
+    return vscode.workspace.fs.readFile(revision ? vscode.Uri.file(revision.path) : uri);
+  }
+  const root = await repoRoot(path.dirname(revision.path));
+  const relative = root && toRelative(root, revision.path);
+  if (!root || !relative) {
+    throw new Error('This document is not inside a git repository.');
+  }
+  return readAtRef(root, relative, revision.ref);
+}
+
 /** Serves both sides of the comparison as plain text, converting on demand. */
 export class DocxDiffContentProvider implements vscode.TextDocumentContentProvider {
   private readonly changed = new vscode.EventEmitter<vscode.Uri>();
@@ -129,10 +187,13 @@ export class DocxDiffContentProvider implements vscode.TextDocumentContentProvid
   }
 
   public async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
+    const src = new URLSearchParams(uri.query).get('src');
     const { target, ref } = decodeDiffUri(uri);
-    const bytes = ref
-      ? await this.readRef(target, ref)
-      : await vscode.workspace.fs.readFile(target);
+    const bytes = src
+      ? await readBytes(vscode.Uri.parse(src))
+      : ref
+        ? await this.readRef(target, ref)
+        : await vscode.workspace.fs.readFile(target);
     try {
       return await docxToDiffText(bytes);
     } catch {
@@ -194,4 +255,44 @@ export async function diffWithHead(target: vscode.Uri | undefined, provider: Doc
     getLog().error(`Comparing ${name} with HEAD failed.`, error);
     void vscode.window.showWarningMessage(`DocDiff: ${message}`);
   }
+}
+
+const DOC_EXT = /\.(docx|docm|dotx|dotm)$/i;
+
+function sideLabel(uri: vscode.Uri): string {
+  const ref = uri.scheme === 'git' ? parseVsCodeGitUri(uri)?.ref : revisionOf(uri)?.ref;
+  return ref === undefined || ref === '~' ? 'Working Tree' : ref === '' ? 'Index' : ref.slice(0, 8);
+}
+
+/**
+ * Git Graph, GitLens and Source Control all open `vscode.diff(left, right)`,
+ * which VS Code cannot text-diff for a custom editor. Swaps any such diff of a
+ * Word document for the same plain-text diff `diffWithHead` shows.
+ */
+export function interceptDocumentDiffs(provider: DocxDiffContentProvider): vscode.Disposable {
+  return vscode.window.tabGroups.onDidChangeTabs(({ opened }) => {
+    for (const tab of opened) {
+      const input = tab.input;
+      getLog().info(`Tab opened: ${tab.label} (${(input as object | undefined)?.constructor?.name ?? 'unknown'}).`);
+      if (!(input instanceof vscode.TabInputTextDiff) || !DOC_EXT.test(input.modified.path)) {
+        continue;
+      }
+      const { original, modified } = input;
+      if (original.scheme === DIFF_SCHEME || modified.scheme === DIFF_SCHEME) {
+        continue;
+      }
+      const wrap = (src: vscode.Uri): vscode.Uri =>
+        vscode.Uri.from({ scheme: DIFF_SCHEME, path: src.path, query: `src=${encodeURIComponent(src.toString())}` });
+      const left = wrap(original);
+      const right = wrap(modified);
+      provider.refresh(left);
+      provider.refresh(right);
+      void (async () => {
+        await vscode.window.tabGroups.close(tab);
+        await vscode.commands.executeCommand(
+          'vscode.diff', left, right, `${path.basename(modified.path)} (${sideLabel(original)} ↔ ${sideLabel(modified)})`,
+        );
+      })();
+    }
+  });
 }
